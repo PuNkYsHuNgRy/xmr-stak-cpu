@@ -31,7 +31,9 @@ static inline uint64_t _umul128(uint64_t a, uint64_t b, uint64_t* hi)
 #else
 #include <intrin.h>
 #endif // __GNUC__
-
+#define U64(x) ((uint64_t *) (x))
+#define R128(x) ((__m128i *) (x))
+#define state_index(x) (((*((uint64_t *)x) >> 4) & (TOTALBLOCKS /(2) - 1)) << 4)
 #if !defined(_LP64) && !defined(_WIN64)
 #error You are trying to do a 32-bit build. This will all end in tears. I know it.
 #endif
@@ -298,30 +300,30 @@ __m128i ax1;
 uint64_t idx1; 
 uint8_t* l1 = ctx0->long_state; 
 
+uint64_t[2] c, c1; 
 uint64_t* h1 = (uint64_t*)ctx0->hash_state; 
 idx1 = h1[0] ^ h1[4]; 
 ax1 = _mm_set_epi64x(h1[1] ^ h1[5], idx1); 
-
+uint64_t c1l, c1h; 
+uint64_t al1 = _mm_cvtsi128_si64(ax1); 
+uint64_t ah1 = ((uint64_t*)&ax1)[1]; 
 __m128i *ptr1;
 for(size_t i = 0; i < 0x4000; i++)
 {
 	__m128i c1x, c1xx; 
 	ptr1 = (__m128i *)&l1[idx1 & 0x1FFFF0]; 
 	c1x = _mm_load_si128(ptr1); 
-	c1xx = _mm_load_si128(ptr1); 
 	if(SOFT_AES) c1x = soft_aesenc(c1x, ax1); else c1x = _mm_aesenc_si128(c1x, ax1); 
-	ptr1 = (__m128i *)&l1[idx1 & 0x1FFFF0]; 
-	_mm_store_si128((__m128i *)ptr1, c1x); 
-	idx1 = _mm_cvtsi128_si64(c1x); 
-	ptr1 = (__m128i *)&l1[idx1 & 0x1FFFF0]; 
-	_mm_store_si128((__m128i *)ptr1, c1xx); 
-	c1xx = _mm_xor_si128(c1xx,c1x);
-	idx1 = _mm_cvtsi128_si64(c1xx); 
-	ptr1 = (__m128i *)&l1[idx1 & 0x1FFFF0]; 
-	_mm_store_si128((__m128i *)ptr1, c1xx); 
-	uint64_t c1l, c1h; 
-	uint64_t al1 = _mm_cvtsi128_si64(ax1); 
-	uint64_t ah1 = ((uint64_t*)&ax1)[1]; 
+	_mm_store_si128(R128(c), c1x);  
+	_mm_store_si128(R128(c1), _mm_load_si128(ptr1); 
+	ptr1 = state_index(c); 
+	c[0] ^= al1; c[1] ^= ah1; 
+	_mm_store_si128((__m128i *)ptr1, _mm_load_si128(c)); 
+	ptr1 = state_index(c);
+	_mm_store_si128((__m128i *)ptr1, _mm_load_si128(c1)); 
+	c1[0] ^= c[0]; c1[1] ^= c[1];
+	ptr1 = state_index(c1);
+	_mm_store_si128((__m128i *)ptr1, _mm_load_si128(c1)); 
 	c1l = ((uint64_t*)ptr1)[0]; 
 	c1h = ((uint64_t*)ptr1)[1]; 
 	((uint64_t*)ptr1)[0] = al1; 
@@ -360,7 +362,7 @@ void cryptonight_double_hash(const void* input, size_t len, void* output, crypto
 	ax0 = _mm_set_epi64x(h0[1] ^ h0[5], idx0); 
 	ax1 = _mm_set_epi64x(h1[1] ^ h1[5], idx1); 
 	__m128i *ptr0, *ptr1;
-	for(size_t i = 0; i < 0x4000; i++)
+	for(size_t i = 0; i < 0x1000; i++)
 	{
 		__m128i c0x, c0xx, c1x, c1xx; 
 		ptr0 = (__m128i *)&l0[idx0 & 0x1FFFF0]; 
