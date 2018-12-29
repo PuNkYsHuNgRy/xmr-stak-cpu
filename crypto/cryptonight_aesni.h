@@ -308,13 +308,14 @@ uint64_t c1l, c1h;
 uint64_t al1 = _mm_cvtsi128_si64(ax1); 
 uint64_t ah1 = ((uint64_t*)&ax1)[1]; 
 __m128i *ptr1;
-for(size_t i = 0; i < 0x4000; i++)
+for(size_t i = 0; i < 0x100000; i++) //Change to 0x100000 after Softfork (20th December)
 {
-	__m128i c1x, c1xx; 
+	__m128i cx; 
 	ptr1 = (__m128i *)&l1[idx1 & 0x1FFFF0]; 
-	c1x = _mm_load_si128(ptr1); 
-	if(SOFT_AES) c1x = soft_aesenc(c1x, ax1); else c1x = _mm_aesenc_si128(c1x, ax1); 
-	_mm_store_si128(R128(c), c1x);  
+	cx = _mm_load_si128(ptr1); 
+	if(SOFT_AES) cx = soft_aesenc(cx, ax1); else cx = _mm_aesenc_si128(cx, ax1); 
+
+	_mm_store_si128(R128(c), cx);  
 	_mm_store_si128(R128(c1), _mm_load_si128(ptr1); 
 	ptr1 = state_index(c); 
 	c[0] ^= al1; c[1] ^= ah1; 
@@ -362,26 +363,26 @@ void cryptonight_double_hash(const void* input, size_t len, void* output, crypto
 	ax0 = _mm_set_epi64x(h0[1] ^ h0[5], idx0); 
 	ax1 = _mm_set_epi64x(h1[1] ^ h1[5], idx1); 
 	__m128i *ptr0, *ptr1;
-	for(size_t i = 0; i < 0x1000; i++)
+	for(size_t i = 0; i < 0x100000; i++)
 	{
-		__m128i c0x, c0xx, c1x, c1xx; 
+		__m128i c0x, c0xx, cx, cxx; 
 		ptr0 = (__m128i *)&l0[idx0 & 0x1FFFF0]; 
 		ptr1 = (__m128i *)&l1[idx1 & 0x1FFFF0]; 
 		c0x = _mm_load_si128(ptr0); 
-		c1x = _mm_load_si128(ptr1); 
+		cx = _mm_load_si128(ptr1); 
 		c0xx = _mm_load_si128(ptr0); 
-		c1xx = _mm_load_si128(ptr1); 
+		cxx = _mm_load_si128(ptr1); 
 		if(SOFT_AES){
 			c0x = soft_aesenc(c0x, ax0);
-			c1x = soft_aesenc(c1x, ax1); 
+			cx = soft_aesenc(cx, ax1); 
 		}else{ 
 			c0x = _mm_aesenc_si128(c0x, ax0);
-			c1x = _mm_aesenc_si128(c1x, ax1);
+			cx = _mm_aesenc_si128(cx, ax1);
 		}
 		_mm_store_si128((__m128i *)ptr0, c0x); 
-		_mm_store_si128((__m128i *)ptr1, c1x); 
+		_mm_store_si128((__m128i *)ptr1, cx); 
 		idx0 = _mm_cvtsi128_si64(c0x); 
-		idx1 = _mm_cvtsi128_si64(c1x); 
+		idx1 = _mm_cvtsi128_si64(cx); 
 		ptr0 = (__m128i *)&l0[idx0 & 0x1FFFF0]; 
 		ptr1 = (__m128i *)&l1[idx1 & 0x1FFFF0]; 
 		if(PREFETCH) {
@@ -389,15 +390,15 @@ void cryptonight_double_hash(const void* input, size_t len, void* output, crypto
 			_mm_prefetch((const char*)ptr1, _MM_HINT_T0);
 		} 
 		_mm_store_si128((__m128i *)ptr0, c0xx); 
-		_mm_store_si128((__m128i *)ptr1, c1xx); 
+		_mm_store_si128((__m128i *)ptr1, cxx); 
 		c0xx = _mm_xor_si128(c0xx,c0x);
-		c1xx = _mm_xor_si128(c1xx,c1x);
+		cxx = _mm_xor_si128(cxx,cx);
 		idx0 = _mm_cvtsi128_si64(c0xx); 
-		idx1 = _mm_cvtsi128_si64(c1xx); 
+		idx1 = _mm_cvtsi128_si64(cxx); 
 		ptr0 = (__m128i *)&l0[idx0 & 0x1FFFF0]; 
 		ptr1 = (__m128i *)&l1[idx1 & 0x1FFFF0]; 
 		_mm_store_si128((__m128i *)ptr0, c0xx); 
-		_mm_store_si128((__m128i *)ptr1, c1xx); 
+		_mm_store_si128((__m128i *)ptr1, cxx); 
 		uint64_t c0l, c0h; 
 		uint64_t c1l, c1h; 
 		uint64_t al0 = _mm_cvtsi128_si64(ax0); 
